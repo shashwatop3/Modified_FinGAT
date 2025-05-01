@@ -2,6 +2,8 @@
 
 A deep learning framework for stock market prediction combining graph attention networks and transformer architectures.
 
+Report File : https://www.overleaf.com/read/sqhjzrzcmsmc#d45cb9
+
 ## Overview
 
 FinGAT (Financial Graph Attention Transformer) is a novel approach to predicting stock returns by leveraging both temporal patterns and industry sector relationships. The model processes historical stock data through a sophisticated pipeline of feature engineering, graph-based attention mechanisms, and transformer networks to generate actionable trading signals.
