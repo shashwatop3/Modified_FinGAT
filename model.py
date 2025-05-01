@@ -29,7 +29,6 @@ import json
 import matplotlib.pyplot as plt
 
 
-
 class SimpleTemporalEncoding(nn.Module):
     """Simplified temporal encoding module"""
     def __init__(self, d_model, max_len=100):
@@ -261,55 +260,55 @@ class EnhancedSectorModel(nn.Module):
         return refined_x_batch
 
 class EnhancedFinGAT(nn.Module):
-    def __init__(self, input_dim, hidden_dim=64, embed_dim=64, num_sectors=19, adv_momentum_index=20):
+    def __init__(self, input_dim, hidden_dim=64, embed_dim=64, num_sectors=19, technical_indicator=20):
         super().__init__()
         
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.embed_dim = embed_dim
         self.num_sectors = num_sectors
-        self.adv_momentum_index = adv_momentum_index
+        self.technical_indicator = technical_indicator
         
         # Print configurations to debug dimension issues
         print(f"Model config: input_dim={input_dim}, hidden_dim={hidden_dim}, embed_dim={embed_dim}")
         
-        # Feature extractors (unchanged)
+        # Feature extractors 
         self.regular_feature_extractor = nn.Sequential(
-            nn.Linear(input_dim-1, hidden_dim),
+            nn.Linear(self.technical_indicator, hidden_dim),  
             nn.LayerNorm(hidden_dim),
             nn.ReLU()
         )
         
-        # Momentum processing (unchanged - preserving look-ahead bias)
-        self.momentum_extractor = nn.Sequential(
+
+        self.indicator_extractor = nn.Sequential(
             nn.Linear(1, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU()
         )
         
-        # Direct prediction from momentum (unchanged)
-        self.momentum_direct_predictor = nn.Linear(hidden_dim, embed_dim)
+        # Direct prediction from indicator 
+        self.indicator_direct_predictor = nn.Linear(hidden_dim, embed_dim)
         
-        # Feature fusion (unchanged)
+        # Feature fusion 
         self.feature_fusion = nn.Sequential(
             nn.Linear(hidden_dim * 2, hidden_dim),
             nn.LayerNorm(hidden_dim),
             nn.ReLU()
         )
         
-        # Temporal encoding (unchanged)
+        # Temporal encoding 
         self.temporal_encoder = SimpleTemporalEncoding(hidden_dim)
         
         # Enhanced sequential learning with improved transformer
         self.sequential_learner = EnhancedTransformerSequentialModule(
             input_dim=hidden_dim, 
             hidden_dim=hidden_dim,
-            nhead=8,  # Increased number of heads
+            nhead=8,
             num_layers=3  # Increased number of layers
         )
         
-        # Momentum attention gate (unchanged)
-        self.momentum_gate = nn.Sequential(
+        # indicator attention gate 
+        self.indicator_gate = nn.Sequential(
             nn.Linear(hidden_dim, 1),
             nn.Sigmoid()
         )
@@ -334,7 +333,7 @@ class EnhancedFinGAT(nn.Module):
             nn.Dropout(0.1)  # Adding dropout for regularization
         )
         
-        # Task-specific prediction heads (unchanged)
+        # Task-specific prediction heads 
         self.return_predictor = nn.Linear(embed_dim, 1)
         self.movement_predictor = nn.Sequential(
             nn.Linear(embed_dim, 1),
@@ -345,34 +344,29 @@ class EnhancedFinGAT(nn.Module):
         """Forward pass with unchanged interface to maintain compatibility"""
         batch_size, seq_len, _ = features.size()
         
-        # 1. Extract the advanced indicator features and other features separately (unchanged)
-        momentum_features = features[:, :, self.adv_momentum_index:self.adv_momentum_index+1]
-        regular_features = torch.cat([
-            features[:, :, :self.adv_momentum_index], 
-            features[:, :, self.adv_momentum_index+1:]
-        ], dim=2)
-        
+        indicator_features = features[:, :, self.technical_indicator:self.technical_indicator+1]
+        regular_features = features[:, :, :self.technical_indicator]  # Removed trailing comma
+
         # 2. Process features separately 
         regular_processed = self.regular_feature_extractor(regular_features)
-        momentum_processed = self.momentum_extractor(momentum_features)
-        momentum_signal = momentum_processed.mean(dim=1)  # Aggregate across time
+        indicator_processed = self.indicator_extractor(indicator_features)
+        indicator_signal = indicator_processed.mean(dim=1)  # Aggregate across time
         
-        # Direct momentum influence (unchanged - preserving look-ahead bias)
-        momentum_prediction = self.momentum_direct_predictor(momentum_signal)
+        indicator_prediction = self.indicator_direct_predictor(indicator_signal)
         
-        # 3. Concatenate features (unchanged)
-        combined_features = torch.cat([regular_processed, momentum_processed], dim=2)
+        # 3. Concatenate features 
+        combined_features = torch.cat([regular_processed, indicator_processed], dim=2)
         features = self.feature_fusion(combined_features)
         
-        # 4. Add temporal information (unchanged)
+        # 4. Add temporal information 
         features = self.temporal_encoder(features)
         
         # 5. Process sequence with enhanced transformer
         seq_context, seq_outputs = self.sequential_learner(features)
         
-        # 6. Apply momentum attention gate (unchanged)
-        gate_value = self.momentum_gate(seq_context)
-        seq_context = seq_context * (2.0 + gate_value)  # Boost signal based on momentum
+        # 6. Apply indicator attention gate 
+        gate_value = self.indicator_gate(seq_context)
+        seq_context = seq_context * (2.0 + gate_value)  # Boost signal based on indicator
         
         # 7. Process intra-sector relationships with enhanced processing
         intra_sector_context = self.intra_sector_projection(seq_context)
@@ -380,14 +374,14 @@ class EnhancedFinGAT(nn.Module):
         # 8. Inter-sector modeling with enhanced sector model
         sector_context = self.sector_model(intra_sector_context, sector_indices)
         
-        # 9. Combine sequential and sector representations (unchanged)
+        # 9. Combine sequential and sector representations 
         combined_context = torch.cat([seq_context, sector_context], dim=1)
         
-        # 10. Fuse features (unchanged momentum influence - preserving look-ahead bias)
+
         fused_embeddings = self.fusion(combined_context)  
-        fused_embeddings = fused_embeddings * 0.20 + momentum_prediction * 0.80
+        fused_embeddings = fused_embeddings * 0.90 + indicator_prediction * 0.10
         
-        # 11. Generate predictions (unchanged)
+        # 11. Generate predictions 
         return_preds = self.return_predictor(fused_embeddings).squeeze(-1)
         movement_preds = self.movement_predictor(fused_embeddings).squeeze(-1)
         
