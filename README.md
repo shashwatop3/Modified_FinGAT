@@ -45,3 +45,5 @@ FinGAT (Financial Graph Attention Transformer) is a novel approach to predicting
 - Generate daily prediction CSVs for portfolio construction
 - Analyze model effectiveness across different portfolio sizes (K=5, 10, 20)
 
+
+### Output: Generateed CSVs are stored in output_results.zip
