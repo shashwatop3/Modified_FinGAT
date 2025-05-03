@@ -47,3 +47,4 @@ FinGAT (Financial Graph Attention Transformer) is a novel approach to predicting
 
 
 ### Output: Generated CSVs are stored in output_results.zip
+### Ablation study in Ablation_study.pdf
